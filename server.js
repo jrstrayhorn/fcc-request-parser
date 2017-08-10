@@ -5,6 +5,11 @@
 var express = require('express');
 var app = express();
 
+var requestIp = require('request-ip')
+var UAParser = require('ua-parser-js')
+var langParser = require('accept-language-parser')
+
+var parser = new UAParser();
 // we've started you off with Express, 
 // but feel free to use whatever libs or frameworks you'd like through `package.json`.
 
@@ -13,8 +18,23 @@ app.use(express.static('public'));
 
 // http://expressjs.com/en/starter/basic-routing.html
 app.get("/", function (request, response) {
-  response.sendFile(__dirname + '/views/index.html');
+  var results = {}
+  results['ip'] = requestIp.getClientIp(request)
+  results['language'] = formatLanguage(langParser.parse(request.headers['accept-language'])[0])
+  results['OS'] = formatOS(parser.setUA(request.headers['user-agent']).getOS())
+  response.json(results)
+  //response.sendFile(__dirname + '/views/index.html');
 });
+
+function formatLanguage(langObj) {
+  var code = langObj.code
+  var region = (langObj.region) ? "-"+langObj.region : ""
+  return code + region
+}
+
+function formatOS(osObj) {
+  return osObj.name + " " + osObj.version
+}
 
 app.get("/dreams", function (request, response) {
   response.send(dreams);
@@ -34,6 +54,6 @@ var dreams = [
 ];
 
 // listen for requests :)
-var listener = app.listen(process.env.PORT, function () {
+var listener = app.listen(process.env.PORT || '3939', function () {
   console.log('Your app is listening on port ' + listener.address().port);
 });
